@@ -57,7 +57,7 @@ def send_deadline_reminder_email(task_id: int):
     for user in task.assigned_to.all():
         message = (
             f"Hello {user.username},\n\n"
-            f"This is a reminder that your task \"{task.title}\" is due soon.\n"
+            f"This is a reminder that your task \"{task.title}\" will due soon.\n"
             f"Deadline: {deadline_str}\n\n"
             f"Please make sure to complete it on time.\n\n"
             f"Regards,\nTask Management System"

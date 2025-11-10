@@ -1,22 +1,28 @@
 from django.contrib import admin
 from .models import Task, ManagerProfile, EmployeeProfile
 
+
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
-    list_display = ('id', 'title', 'get_assigned_users', 'status', 'deadline', 'created_by', 'created_at')
+    list_display = (
+        'id', 'title', 'get_assigned_users',
+        'status', 'deadline', 'created_by', 'created_at'
+    )
     list_filter = ('status', 'deadline')
     search_fields = ('title', 'description', 'created_by__username')
 
     def get_assigned_users(self, obj):
-        return ", ".join([user.username for user in obj.assigned_to.all()])
-    get_assigned_users.short_description = "Assigned To"
+        return ", ".join([f"{user.id} - {user.username}" for user in obj.assigned_to.all()])
+    get_assigned_users.short_description = "Assigned To (ID - Username)"
 
 
 @admin.register(ManagerProfile)
 class ManagerProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'department')
+    list_display = ('id', 'name', 'user', 'department')  
+    search_fields = ('name', 'user__username', 'department')
 
 
 @admin.register(EmployeeProfile)
 class EmployeeProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'position')
+    list_display = ('id', 'name', 'user', 'position')  
+    search_fields = ('name', 'user__username', 'position')

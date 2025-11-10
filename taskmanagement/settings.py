@@ -182,11 +182,19 @@ REST_FRAMEWORK = {
     ],
 }
 
-# Timezone
 TIME_ZONE = "Asia/Kolkata"
 USE_TZ = True
 
-# Celery timezone config
 CELERY_ENABLE_UTC = False
 CELERY_TIMEZONE = "Asia/Kolkata"
 
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / "db.sqlite3",
+        'OPTIONS': {
+            'timeout': 30,  
+        },
+    }
+}
