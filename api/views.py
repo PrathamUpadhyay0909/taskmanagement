@@ -85,14 +85,11 @@ class ManagerTaskListCreateView(APIView):
     def post(self, request):
         s = TaskCreateUpdateSerializer(data=request.data)
         if s.is_valid():
-            # Extract validated data first
             validated_data = s.validated_data
             assigned_users = validated_data.pop("assigned_to", [])
 
-            # Create task manually
             task = Task.objects.create(created_by=request.user, **validated_data)
 
-            # Assign multiple employees to the M2M field
             task.assigned_to.set(assigned_users)
             task.save()
 
