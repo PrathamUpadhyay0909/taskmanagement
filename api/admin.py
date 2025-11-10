@@ -18,11 +18,27 @@ class TaskAdmin(admin.ModelAdmin):
 
 @admin.register(ManagerProfile)
 class ManagerProfileAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'user', 'department')  
+    list_display = ('id', 'get_user_id', 'name', 'get_username', 'department')  
     search_fields = ('name', 'user__username', 'department')
+
+    def get_user_id(self, obj):
+        return obj.user.id
+    get_user_id.short_description = "User ID"
+
+    def get_username(self, obj):
+        return obj.user.username
+    get_username.short_description = "Username"
 
 
 @admin.register(EmployeeProfile)
 class EmployeeProfileAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'user', 'position')  
+    list_display = ('id', 'get_user_id', 'name', 'get_username', 'position')  
     search_fields = ('name', 'user__username', 'position')
+
+    def get_user_id(self, obj):
+        return obj.user.id
+    get_user_id.short_description = "User ID"
+
+    def get_username(self, obj):
+        return obj.user.username
+    get_username.short_description = "Username"
