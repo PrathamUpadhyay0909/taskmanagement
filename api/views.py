@@ -47,7 +47,6 @@ class RegisterView(APIView):
             status_bool=False
         )
 
-
 class LoginView(APIView):
     permission_classes = [AllowAny]
 
@@ -67,7 +66,6 @@ class LoginView(APIView):
             status_code=status.HTTP_400_BAD_REQUEST,
             status_bool=False
         )
-
 
 class ManagerTaskListCreateView(APIView):
     authentication_classes = [JWTAuthentication]
@@ -166,7 +164,6 @@ class EmployeeMyTasksView(APIView):
             data=serialized,
             status_code=status.HTTP_200_OK
         )
-
 
 class EmployeeTaskStatusUpdateView(APIView):
     authentication_classes = [JWTAuthentication]

@@ -12,7 +12,6 @@ STATUS_CHOICES = (
 def default_deadline():
     return timezone.now() + timedelta(days=7)
 
-
 class Task(models.Model):
     id = models.AutoField(primary_key=True)
     title = models.CharField(max_length=200)
@@ -32,7 +31,6 @@ class Task(models.Model):
     def __str__(self):
         return f"{self.title} (#{self.id})"
 
-
 class ManagerProfile(models.Model):
     id = models.AutoField(primary_key=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='manager_profile')
@@ -41,7 +39,6 @@ class ManagerProfile(models.Model):
 
     def __str__(self):
         return f"{self.name or self.user.username} (Manager)"  
-
 
 class EmployeeProfile(models.Model):
     id = models.AutoField(primary_key=True)
