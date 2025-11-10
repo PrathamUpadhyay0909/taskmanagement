@@ -1,11 +1,11 @@
 from django.contrib import admin
+from .models import Task, ManagerProfile, EmployeeProfile
 
-from .models import Task, managerProfile, employeeProfile
-admin.site.register(Task)
-admin.site.register(managerProfile)
-admin.site.register(employeeProfile)
+@admin.register(Task)
+class TaskAdmin(admin.ModelAdmin):
+    list_display = ("id", "title", "assigned_to", "created_by", "status", "deadline", "reminder_sent", "created_at")
+    list_filter = ("status", "reminder_sent")
+    search_fields = ("title", "description", "assigned_to__username", "created_by__username")
 
-class MyTaskView(admin.ModelAdmin):
-    list_display = ('id', 'title', 'assigned_to', 'status', 'deadline', 'created_at')
-    search_fields = ('title', 'assigned_to__username', 'status')
-    list_filter = ('status', 'created_at')
+admin.site.register(ManagerProfile)
+admin.site.register(EmployeeProfile)

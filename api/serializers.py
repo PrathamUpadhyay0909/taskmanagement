@@ -1,13 +1,14 @@
 from rest_framework import serializers
-from .models import managerProfile, employeeProfile, Task
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from rest_framework_simplejwt.tokens import RefreshToken
 
-class UserSerializer(serializers.ModelSerializer):
+from .models import Task, ManagerProfile, EmployeeProfile, STATUS_CHOICES
+
+class UserBasicSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email']
+        fields = ["id", "username", "email"]
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
@@ -15,54 +16,70 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'role']
+        fields = ["username", "email", "password", "role"]
 
     def create(self, validated_data):
-        role = validated_data.pop('role')
+        role = validated_data.pop("role")
         user = User.objects.create_user(**validated_data)
-        if role == 'manager':
-            managerProfile.objects.create(user=user)
+        if role == "manager":
+            ManagerProfile.objects.create(user=user)
         else:
-            employeeProfile.objects.create(user=user)
+            EmployeeProfile.objects.create(user=user)
         return user
-
-class TaskSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Task
-        fields = '__all__'
 
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
     password = serializers.CharField(write_only=True)
 
     def validate(self, data):
-        username = data.get('username')
-        password = data.get('password')
+        username = data.get("username")
+        password = data.get("password")
         user = User.objects.filter(username=username).first()
         if user and user.check_password(password):
             refresh = RefreshToken.for_user(user)
             return {
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
+                "refresh": str(refresh),
+                "access": str(refresh.access_token),
+                "user": UserBasicSerializer(user).data
             }
         raise serializers.ValidationError("Invalid username or password")
-    
-class managerProfileSerializer(serializers.ModelSerializer):
-    user = UserSerializer()
 
-    class Meta:
-        model = managerProfile
-        fields = ['user_id','user', 'department']
+class TaskListSerializer(serializers.ModelSerializer):
+    assigned_to = UserBasicSerializer(read_only=True)
+    created_by = UserBasicSerializer(read_only=True)
 
-class employeeProfileSerializer(serializers.ModelSerializer):
-    user = UserSerializer()
-
-    class Meta:
-        model = employeeProfile
-        fields = ['user_id','user', 'position']
-
-class TaskUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
-        fields = ['status']
+        fields = "__all__"
+
+class TaskCreateUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Task
+        fields = ["title", "description", "assigned_to", "deadline", "status", "remark"]
+
+    def validate_assigned_to(self, user):
+        if not hasattr(user, "employee_profile"):
+            raise serializers.ValidationError("assigned_to must be an Employee user.")
+        return user
+
+    def validate_status(self, value):
+        valid = [c[0] for c in STATUS_CHOICES]
+        if value not in valid:
+            raise serializers.ValidationError("Invalid status.")
+        return value
+
+class EmployeeTaskStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Task
+        fields = ["status", "remark"]
+
+class TaskSerializer(serializers.ModelSerializer):
+    deadline = serializers.DateTimeField(
+        format="%Y-%m-%d %H:%M:%S",   
+        input_formats=["%Y-%m-%d %H:%M:%S", "%d-%m-%Y %H:%M:%S"]
+    )
+
+    class Meta:
+        model = Task
+        fields = "__all__"
 

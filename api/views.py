@@ -1,90 +1,180 @@
-from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Task, managerProfile, employeeProfile
-from .serializers import TaskSerializer, RegisterSerializer, LoginSerializer, managerProfileSerializer, employeeProfileSerializer
-from django.contrib.auth.models import User
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.decorators import permission_classes, authentication_classes
+from django.shortcuts import get_object_or_404
+from .models import Task
+from .serializers import (
+    RegisterSerializer,LoginSerializer,TaskListSerializer,TaskCreateUpdateSerializer,EmployeeTaskStatusSerializer,
+)
+from .permissions import IsManager, IsEmployee
+
+def standard_response(message=None, data=None, status_code=200, status_bool=True):
+
+    response_data = {
+        "status": status_bool,
+        "message": message,
+        "data": data if status_bool else None
+    }
+    return Response(response_data, status=status_code)
 
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        serializer = RegisterSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+        s = RegisterSerializer(data=request.data)
+        if s.is_valid():
+            user = s.save()
+            user_data = {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+            }
+            return standard_response(
+                message="User registered successfully.",
+                data=user_data,
+                status_code=status.HTTP_201_CREATED,
+                status_bool=True
+            )
+        error_message = next(iter(s.errors.values()))[0] if s.errors else "Registration failed."
+        return standard_response(
+            message=str(error_message),
+            data=None,
+            status_code=status.HTTP_400_BAD_REQUEST,
+            status_bool=False
+        )
+
+
 class LoginView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        serializer = LoginSerializer(data=request.data)
-        if serializer.is_valid():
-            return Response(serializer.validated_data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-class TaskView(APIView):
+        s = LoginSerializer(data=request.data)
+        if s.is_valid():
+            return standard_response(
+                message="Login successful.",
+                data=s.validated_data,
+                status_code=status.HTTP_200_OK,
+                status_bool=True
+            )
+        error_message = next(iter(s.errors.values()))[0] if s.errors else "Invalid username or password."
+        return standard_response(
+            message=str(error_message),
+            data=None,
+            status_code=status.HTTP_400_BAD_REQUEST,
+            status_bool=False
+        )
+
+
+class ManagerTaskListCreateView(APIView):
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsManager]
 
     def get(self, request):
-        tasks = Task.objects.all()
-        serializer = TaskSerializer(tasks, many=True)
-        return Response(serializer.data)
+        qs = Task.objects.filter(created_by=request.user)
+        serialized = TaskListSerializer(qs, many=True).data
+        return standard_response(
+            message="Tasks fetched successfully.",
+            data=serialized,
+            status_code=status.HTTP_200_OK
+        )
 
     def post(self, request):
-        serializer = TaskSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(created_by=request.user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-class TaskDetailView(APIView):
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
+        s = TaskCreateUpdateSerializer(data=request.data)
+        if s.is_valid():
+            task = s.save(created_by=request.user)
+            serialized = TaskListSerializer(task).data
+            return standard_response(
+                message="Task created successfully.",
+                data=serialized,
+                status_code=status.HTTP_201_CREATED
+            )
+        error_message = next(iter(s.errors.values()))[0] if s.errors else "Task creation failed."
+        return standard_response(
+            message=str(error_message),
+            data=None,
+            status_code=status.HTTP_400_BAD_REQUEST,
+            status_bool=False
+        )
 
-    def get_object(self, pk):
-        try:
-            return Task.objects.get(pk=pk)
-        except Task.DoesNotExist:
-            return None
+
+class ManagerTaskDetailView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsManager]
+
+    def get_object(self, request, pk):
+        return get_object_or_404(Task, pk=pk, created_by=request.user)
 
     def get(self, request, pk):
-        task = self.get_object(pk)
-        if not task:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-        serializer = TaskSerializer(task)
-        return Response(serializer.data)
+        task = self.get_object(request, pk)
+        serialized = TaskListSerializer(task).data
+        return standard_response(
+            message="Task details retrieved successfully.",
+            data=serialized,
+            status_code=status.HTTP_200_OK
+        )
 
     def put(self, request, pk):
-        task = self.get_object(pk)
-        if not task:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-        serializer = TaskSerializer(task, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        task = self.get_object(request, pk)
+        s = TaskCreateUpdateSerializer(task, data=request.data, partial=True)
+        if s.is_valid():
+            task = s.save()
+            serialized = TaskListSerializer(task).data
+            return standard_response(
+                message="Task updated successfully.",
+                data=serialized,
+                status_code=status.HTTP_200_OK
+            )
+        error_message = next(iter(s.errors.values()))[0] if s.errors else "Task update failed."
+        return standard_response(
+            message=str(error_message),
+            data=None,
+            status_code=status.HTTP_400_BAD_REQUEST,
+            status_bool=False
+        )
 
     def delete(self, request, pk):
-        task = self.get_object(pk)
-        if not task:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+        task = self.get_object(request, pk)
         task.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-class MyTasksView(APIView):
+        return standard_response(
+            message="Task deleted successfully.",
+            data=None,
+            status_code=status.HTTP_204_NO_CONTENT
+        )
+class EmployeeMyTasksView(APIView):
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsEmployee]
 
     def get(self, request):
-        tasks = Task.objects.filter(assigned_to=request.user)
-        serializer = TaskSerializer(tasks, many=True)
-        return Response(serializer.data)
+        qs = Task.objects.filter(assigned_to=request.user)
+        serialized = TaskListSerializer(qs, many=True).data
+        return standard_response(
+            message="My tasks fetched successfully.",
+            data=serialized,
+            status_code=status.HTTP_200_OK
+        )
+
+class EmployeeTaskStatusUpdateView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsEmployee]
+
+    def put(self, request, pk):
+        task = get_object_or_404(Task, pk=pk, assigned_to=request.user)
+        s = EmployeeTaskStatusSerializer(task, data=request.data, partial=True)
+        if s.is_valid():
+            task = s.save()
+            serialized = TaskListSerializer(task).data
+            return standard_response(
+                message="Task status updated successfully.",
+                data=serialized,
+                status_code=status.HTTP_200_OK
+            )
+        error_message = next(iter(s.errors.values()))[0] if s.errors else "Status update failed."
+        return standard_response(
+            message=str(error_message),
+            data=None,
+            status_code=status.HTTP_400_BAD_REQUEST,
+            status_bool=False
+        )

@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+from datetime import timedelta
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,7 +27,7 @@ SECRET_KEY = "django-insecure-u%3-uu&5w%$!la*rq&9r!%@kjj%#%$xny41gdul$#)p5uhc_kl
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -38,6 +40,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "rest_framework.authtoken",
     "api",
     "rest_framework_simplejwt",
     "celery",
@@ -111,7 +114,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Asia/Kolkata"
 
 USE_I18N = True
 
@@ -129,42 +132,61 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
-    ]
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+    "DEFAULT_PERMISSION_CLASSES": (
+        "rest_framework.permissions.IsAuthenticated",
+    ),
 }
-from datetime import timedelta
+
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
 }
 
-
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_USE_TLS = True
-EMAIL_HOST = 'smtp.gmail.com'  
-EMAIL_HOST_USER = 'prathamupadhyay9727@gmail.com'  
-EMAIL_HOST_PASSWORD = 'neqanyysroalezqj'  
-EMAIL_PORT = 587    
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_HOST_USER = "prathamupadhyay9727@gmail.com"
+EMAIL_HOST_PASSWORD = "lzvm uzoa mxkm wbof"
+EMAIL_PORT = 587
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
-BROKER_URL = 'redis://localhost:6379'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379'
-CELERY_ACCEPT_CONTENT = ['application/json']
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = "django-db"  
+CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = 'Asia/Kolkata'
-
-
-
-CELERY_TIMEZONE = "Asia/Kolkata"
+CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60
 
-CELERY_RESULT_BACKEND = 'django-db'
-CELERY_RESULT_BACKEND = 'django-cache'
-CELERY_CACHE_BACKEND = 'default'
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
-        'LOCATION': 'my_cache_table',
-    }
+from celery.schedules import crontab
+CELERY_BEAT_SCHEDULE = {
+    "check-deadline-reminders-every-minute": {
+        "task": "api.tasks.check_and_send_deadline_reminders",
+        "schedule": crontab(),  
+    },
 }
+ 
+REST_FRAMEWORK = {
+    'DATETIME_FORMAT': "%Y-%m-%d %H:%M:%S",  # output format (what DRF returns)
+    'DATETIME_INPUT_FORMATS': [
+        "%Y-%m-%d %H:%M:%S",   # e.g. 2025-11-07 19:00:00
+        "%d-%m-%Y %H:%M:%S",   # e.g. 07-11-2025 19:00:00
+        "%Y-%m-%dT%H:%M:%S%z", # ISO with timezone, e.g. 2025-11-07T19:00:00+05:30
+    ],
+}
+
+# Timezone
+TIME_ZONE = "Asia/Kolkata"
+USE_TZ = True
+
+# Celery timezone config
+CELERY_ENABLE_UTC = False
+CELERY_TIMEZONE = "Asia/Kolkata"
+
