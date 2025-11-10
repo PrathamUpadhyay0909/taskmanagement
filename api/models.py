@@ -16,7 +16,7 @@ class Task(models.Model):
     id = models.AutoField(primary_key=True)
     title = models.CharField(max_length=200)
     description = models.TextField()
-    assigned_to = models.ForeignKey(User, related_name='tasks', on_delete=models.CASCADE)
+    assigned_to = models.ManyToManyField(User, related_name='tasks')
     created_by = models.ForeignKey(User, related_name='created_tasks', on_delete=models.CASCADE)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
     deadline = models.DateTimeField(default=default_deadline)

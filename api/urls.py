@@ -14,7 +14,7 @@ urlpatterns = [
 
 
 # | **Redis**         | Use Memurai (installed on Windows)                            
-# | **Celery Worker** | `celery -A taskmanagement worker --pool=solo --loglevel=info` 
-# | **Celery Beat**   | `celery -A taskmanagement beat --loglevel=info`               
-# | **Django Server** | `python manage.py runserver`                                  
+# | **Celery Worker** | celery -A taskmanagement worker --pool=solo --loglevel=info 
+# | **Celery Beat**   | celery -A taskmanagement beat --loglevel=info             
+# | **Django Server** | python manage.py runserver                                  
 

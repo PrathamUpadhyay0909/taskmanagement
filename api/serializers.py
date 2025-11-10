@@ -45,7 +45,7 @@ class LoginSerializer(serializers.Serializer):
         raise serializers.ValidationError("Invalid username or password")
 
 class TaskListSerializer(serializers.ModelSerializer):
-    assigned_to = UserBasicSerializer(read_only=True)
+    assigned_to = UserBasicSerializer(many=True, read_only=True)
     created_by = UserBasicSerializer(read_only=True)
 
     class Meta:
@@ -53,14 +53,20 @@ class TaskListSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class TaskCreateUpdateSerializer(serializers.ModelSerializer):
+    assigned_to = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(),
+        many=True
+    )
+
     class Meta:
         model = Task
         fields = ["title", "description", "assigned_to", "deadline", "status", "remark"]
 
-    def validate_assigned_to(self, user):
-        if not hasattr(user, "employee_profile"):
-            raise serializers.ValidationError("assigned_to must be an Employee user.")
-        return user
+    def validate_assigned_to(self, users):
+        for user in users:
+            if not hasattr(user, "employee_profile"):
+                raise serializers.ValidationError(f"User {user.username} must be an Employee.")
+        return users
 
     def validate_status(self, value):
         valid = [c[0] for c in STATUS_CHOICES]

@@ -6,12 +6,13 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.shortcuts import get_object_or_404
 from .models import Task
 from .serializers import (
-    RegisterSerializer,LoginSerializer,TaskListSerializer,TaskCreateUpdateSerializer,EmployeeTaskStatusSerializer,
+    RegisterSerializer, LoginSerializer, TaskListSerializer,
+    TaskCreateUpdateSerializer, EmployeeTaskStatusSerializer,
 )
 from .permissions import IsManager, IsEmployee
 
-def standard_response(message=None, data=None, status_code=200, status_bool=True):
 
+def standard_response(message=None, data=None, status_code=200, status_bool=True):
     response_data = {
         "status": status_bool,
         "message": message,
@@ -84,13 +85,24 @@ class ManagerTaskListCreateView(APIView):
     def post(self, request):
         s = TaskCreateUpdateSerializer(data=request.data)
         if s.is_valid():
-            task = s.save(created_by=request.user)
+            # Extract validated data first
+            validated_data = s.validated_data
+            assigned_users = validated_data.pop("assigned_to", [])
+
+            # Create task manually
+            task = Task.objects.create(created_by=request.user, **validated_data)
+
+            # Assign multiple employees to the M2M field
+            task.assigned_to.set(assigned_users)
+            task.save()
+
             serialized = TaskListSerializer(task).data
             return standard_response(
                 message="Task created successfully.",
                 data=serialized,
                 status_code=status.HTTP_201_CREATED
             )
+
         error_message = next(iter(s.errors.values()))[0] if s.errors else "Task creation failed."
         return standard_response(
             message=str(error_message),
@@ -143,6 +155,8 @@ class ManagerTaskDetailView(APIView):
             data=None,
             status_code=status.HTTP_204_NO_CONTENT
         )
+
+
 class EmployeeMyTasksView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsEmployee]
@@ -155,6 +169,7 @@ class EmployeeMyTasksView(APIView):
             data=serialized,
             status_code=status.HTTP_200_OK
         )
+
 
 class EmployeeTaskStatusUpdateView(APIView):
     authentication_classes = [JWTAuthentication]
