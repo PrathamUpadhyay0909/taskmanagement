@@ -1,9 +1,9 @@
 from celery import shared_task
 from django.core.mail import send_mail
 from django.utils import timezone
+from django.conf import settings
 from datetime import timedelta
 from .models import Task
-
 
 @shared_task
 def send_task_assignment_email(task_id: int):
@@ -18,7 +18,7 @@ def send_task_assignment_email(task_id: int):
         return
 
     created_by = task.created_by
-    assigned_users = task.assigned_to.all()  
+    assigned_users = task.assigned_to.all()
 
     subject = f"New Task Assigned - {task.title}"
 
@@ -34,10 +34,8 @@ def send_task_assignment_email(task_id: int):
         )
         send_mail(subject, message, None, [user.email], fail_silently=False)
 
-
 @shared_task
 def send_deadline_reminder_email(task_id: int):
-
     try:
         task = (
             Task.objects
@@ -82,3 +80,30 @@ def check_and_send_deadline_reminders():
 
     for task in qs:
         send_deadline_reminder_email.delay(task.id)
+
+
+@shared_task
+def send_error_email_to_admin(url, user, exception_type, exception_message, traceback_details):
+
+    subject = f" API Error: {exception_type} at {url}"
+    message = f"""
+    URL: {url}
+    User: {user or 'Anonymous'}
+    Exception Type: {exception_type}
+    Exception Message: {exception_message}
+
+    Traceback:
+    {traceback_details}
+    """
+
+    try:
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=settings.EMAIL_HOST_USER,
+            recipient_list=[admin_email for _, admin_email in settings.ADMINS],
+            fail_silently=False,
+        )
+        print(f" Sent error report email to admin for: {url}")
+    except Exception as e:
+        print(f" Failed to send error email via Celery: {e}")

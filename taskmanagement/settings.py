@@ -131,6 +131,16 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+
+DEBUG = True  # ✅ for local development
+
+ALLOWED_HOSTS = ["127.0.0.1", "localhost", "*"]
+
+# ✅ Static Files
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
@@ -138,7 +148,15 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",
     ),
+    "EXCEPTION_HANDLER": "api.exceptions.custom_exception_handler",  
+    "DATETIME_FORMAT": "%Y-%m-%d %H:%M:%S",
+    "DATETIME_INPUT_FORMATS": [
+        "%Y-%m-%d %H:%M:%S",
+        "%d-%m-%Y %H:%M:%S",
+        "%Y-%m-%dT%H:%M:%S%z",
+    ],
 }
+
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
@@ -173,14 +191,6 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
  
-REST_FRAMEWORK = {
-    'DATETIME_FORMAT': "%Y-%m-%d %H:%M:%S",  # output format (what DRF returns)
-    'DATETIME_INPUT_FORMATS': [
-        "%Y-%m-%d %H:%M:%S",   # e.g. 2025-11-07 19:00:00
-        "%d-%m-%Y %H:%M:%S",   # e.g. 07-11-2025 19:00:00
-        "%Y-%m-%dT%H:%M:%S%z", # ISO with timezone, e.g. 2025-11-07T19:00:00+05:30
-    ],
-}
 
 TIME_ZONE = "Asia/Kolkata"
 USE_TZ = True
@@ -197,4 +207,43 @@ DATABASES = {
             'timeout': 30,  
         },
     }
+}
+
+from django.db import connection
+from django.db.backends.signals import connection_created
+from django.dispatch import receiver
+
+@receiver(connection_created)
+def activate_wal(sender, connection, **kwargs):
+    if connection.vendor == 'sqlite':
+        cursor = connection.cursor()
+        cursor.execute('PRAGMA journal_mode=WAL;')
+        cursor.execute('PRAGMA synchronous=NORMAL;')
+
+
+ADMINS = [
+    ("Admin", "prathamupadhyay9727@gmail.com"),
+]
+
+# Make sure DEBUG is False for error emails to trigger
+DEBUG = True
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'error_file': {
+            'level': 'ERROR',
+            'class': 'logging.FileHandler',
+            'filename': 'api_error_logs.log',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['error_file'],
+            'level': 'ERROR',
+            'propagate': True,
+        },
+    },
 }

@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import (
-    RegisterView, LoginView,ManagerTaskListCreateView, ManagerTaskDetailView,EmployeeMyTasksView, EmployeeTaskStatusUpdateView,
+    RegisterView, LoginView,ManagerTaskListCreateView, ManagerTaskDetailView,EmployeeMyTasksView, EmployeeTaskStatusUpdateView,TestErrorView,
 )
 
 urlpatterns = [
@@ -10,11 +10,14 @@ urlpatterns = [
     path("tasks/<int:pk>/",ManagerTaskDetailView.as_view(),name="task-detail"),
     path("my-tasks/",EmployeeMyTasksView.as_view(),name="my-tasks"),
     path("my-tasks/<int:pk>/status/",EmployeeTaskStatusUpdateView.as_view(),name="my-task-status"),
+    path("test-error/", TestErrorView.as_view(), name="test-error"),
+
 ]
 
 
-# | **Redis**         | Use Memurai (installed on Windows)                            
-# | **Celery Worker** | celery -A taskmanagement worker --pool=solo --loglevel=info 
-# | **Celery Beat**   | celery -A taskmanagement beat --loglevel=info             
-# | **Django Server** | python manage.py runserver                                  
+# Redis                           
+#  Celery Worker | celery -A taskmanagement worker --pool=solo --loglevel=info 
+#  Celery Beat  | celery -A taskmanagement beat --loglevel=info             
+#  Django Server | python manage.py runserver                                  
 
+ 
